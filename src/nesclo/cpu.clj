@@ -51,8 +51,3 @@
   (println (format "0x%x => %s " pc inst))
   (def newpc (+ size pc))
   (recur rom (inc newpc)))
-
-      
-  
-  ;;(doall (map (fn [x]  (def pc (+ pc (get instr-size x))) 
-    ;;                    (println (format "0x%x => %s " pc (get instr x)))) rom) ))
