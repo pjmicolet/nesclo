@@ -4,3 +4,7 @@ Why?
 ============================
 
 Want to learn Clojure and want to make an emulator, seems to work well together.
+
+Wiki
+============================
+https://github.com/pjmicolet/nesclo/wiki
