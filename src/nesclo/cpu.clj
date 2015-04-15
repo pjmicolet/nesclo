@@ -47,9 +47,9 @@
 
 (defn disassemble [rom pc]
   (def inst (get instr (nth rom pc "No more PC") "Last Instruction"))
-  (def size (get instr-size (nth rom pc "No more PC") "Last Size"))
   (when (not= inst "Last Instruction")
     (do
+        (def size (get instr-size (nth rom pc)))
         (println (format "0x%x => %s " pc inst))
         (recur rom (+ size (inc pc))))
     ))
