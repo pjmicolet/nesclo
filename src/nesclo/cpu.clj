@@ -71,8 +71,9 @@
 (defn addr [rom pc size]
   (if (= size 0)
     0
-  (when (not= size 0)
-    (+ (bit-shift-left (addr rom pc (- size 1)) 2) (nth rom (+ pc size))))))
+    (condp = size
+      1 (nth rom (+ pc size))
+      2 (+ (bit-shift-left (nth rom (+ pc size)) 8) (addr rom pc (- size 1))))))
 
 (defn disassemble [rom pc]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
