@@ -68,30 +68,29 @@
            1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8])
 
-(defn addr [rom pc size incr]
-  (if (== size 0) 0
-  (if (= size incr)
-    (nth rom (+ pc incr))
-    (+(bit-shift-left (nth rom (+ pc incr)) 2) (addr rom pc size (inc incr))))))
+(defn addr [rom pc size]
+  (if (= size 0)
+    0
+  (when (not= size 0)
+    (+ (bit-shift-left (addr rom pc (- size 1)) 2) (nth rom (+ pc size))))))
 
 (defn disassemble [rom pc]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
-  (println pc)
   (when (not= inst "Last Instruction")
     (let [ addressing (get type-addr (nth rom pc "No pc") "Nil")
           size (get instr-size (nth rom pc))]
     (condp = addressing
-         0 (printf "0x%05x => %s" pc inst)
-         1 (printf "0x%05x => %s #$%02x" pc inst (addr rom pc size 1))
-         2 (printf "0x%05x => %s $%02x" pc inst (addr rom pc size 1))
-         3 (printf "0x%05x => %s $%02x,X" pc inst (addr rom pc size 1))
-         4 (printf "0x%05x => %s $%02x,Y" pc inst (addr rom pc size 1))
-         5 (printf "0x%05x => %s ($%02x,X)" pc inst (addr rom pc size 1))
-         6 (printf "0x%05x => %s ($%02x,Y)" pc inst (addr rom pc size 1))
-         7 (printf "0x%05x => %s $%04x" pc inst (addr rom pc size 1))
-         8 (printf "0x%05x => %s $%04x,X" pc inst (addr rom pc size 1))
-         9 (printf "0x%05x => %s $%04x,Y" pc inst (addr rom pc size 1))
-         10 (printf "0x%05x => %s ($%04x)" pc inst (addr rom pc size 1))
-         11 (printf "0x%05x => %s ($%04x)" pc inst (addr rom pc size 1)))
+         0 (printf "0x%05x => %s\n" pc inst)
+         1 (printf "0x%05x => %s #$%02x\n" pc inst (addr rom pc size))
+         2 (printf "0x%05x => %s $%02x\n" pc inst (addr rom pc size))
+         3 (printf "0x%05x => %s $%02x,X\n" pc inst (addr rom pc size))
+         4 (printf "0x%05x => %s $%02x,Y\n" pc inst (addr rom pc size))
+         5 (printf "0x%05x => %s ($%02x,X)\n" pc inst (addr rom pc size))
+         6 (printf "0x%05x => %s ($%02x,Y)\n" pc inst (addr rom pc size))
+         7 (printf "0x%05x => %s $%04x\n" pc inst (addr rom pc size))
+         8 (printf "0x%05x => %s $%04x,X\n" pc inst (addr rom pc size))
+         9 (printf "0x%05x => %s $%04x,Y\n" pc inst (addr rom pc size))
+         10 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size))
+         11 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size)))
     (recur rom (+ size (inc pc)))))))
 
