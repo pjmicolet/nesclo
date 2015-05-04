@@ -11,3 +11,11 @@
         buffer (byte-array buf)]
     (.read in buffer)
     (map unsigned-byte (sequence buffer)))))
+
+
+;; Ok so this is way not clean for now because I
+;; completely disregard the iNes headers.
+;; TODO: Make iNes headers mean something
+(defn getrom [filepath]
+  (let [ rom (romread filepath) ]
+    (drop 16 rom)))
