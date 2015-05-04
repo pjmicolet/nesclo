@@ -18,5 +18,6 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (let[buffer (romread filepath)] (start-rom buffer 16)))
+  (let[buffer (getrom filepath)] (start-rom buffer 0x0000)))
+
 
