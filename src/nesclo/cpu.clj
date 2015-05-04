@@ -52,7 +52,7 @@
 ;; 9 absolute, Y
 ;; 10 indirect
 ;; 11 relative
-(def type-addr [0 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
+(def type-addr-diss [0 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
            7 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
@@ -62,14 +62,33 @@
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
            1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
+           1 5 1 5 2 2 4 4 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           1 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
+           1 5 0 5 2 2 4 4 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
            1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
            1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
            11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8])
+
+(def type-addr ["imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "abs" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "ind" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imm" "iix" "imm" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imm" "iix" "imm" "iix" "zp" "zp" "zpy" "zpy" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imm" "iix" "imp" "iix" "zp" "zp" "zpy" "zpy" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imm" "iiy" "imm" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
+           "imm" "iiy" "imm" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
+           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx"])
 
 (defn addr [rom pc size]
   (if (= size 0)
