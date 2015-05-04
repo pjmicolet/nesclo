@@ -143,3 +143,19 @@
          11 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size)))
     (recur rom (+ size (inc pc)))))))
 
+(defn run [op rom regs]
+  (op rom regs))
+
+(defn execute-instr [rom regs]
+  (dis-once rom (get regs :pc))
+  (let [ inst (get @instr-ops (nth rom (get regs :pc)) "Last") ]
+  (when (not= inst "Last")
+    (recur rom (run inst rom regs)))))
+
+(defn start-rom [rom pc]
+  ;; Will do some initialisation here
+  (let [ registers {:pc 0 :a 0x00 :x 0x00 :y 0x00 :s 0xFD :p 0x34}]
+    (printf "Starting at 0x%02x\n" pc)
+    (printf "Registers are %s\n" (get registers :pc))
+    (execute-instr rom (assoc-in registers [:pc] pc))
+    (printf "DONE\n")))
