@@ -103,6 +103,11 @@
          ~@code)
        (swap! instr-ops assoc ~opcode ~name)))
 
+(def-instr jmp-abs 0x4C [rom regs]
+  (let [ pc (get regs :pc)
+         size (get instr-size 76)]
+    (assoc-in regs [:pc] (addr rom pc size))))
+
 (defn dis-once [rom pc]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
   (when (not= inst "Last Instruction")
