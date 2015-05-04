@@ -131,7 +131,6 @@
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
   (when (not= inst "Last Instruction")
     (let [ addressing (get type-addr-diss (nth rom pc "No pc") "Nil")
-    (let [ addressing (get type-addr (nth rom pc "No pc") "Nil")
           size (get instr-size (nth rom pc))]
     (condp = addressing
          0 (printf "0x%05x => %s\n" pc inst)
