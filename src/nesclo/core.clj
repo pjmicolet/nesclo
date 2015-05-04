@@ -18,8 +18,5 @@
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (hello) 
-  (ppu_start) 
-  (helloPU)
-  (let[buffer (romread filepath)] (disassemble buffer 0)))
+  (let[buffer (romread filepath)] (start-rom buffer 16)))
 
