@@ -105,8 +105,9 @@
 
 (def-instr jmp-abs 0x4C [rom regs]
   (let [ pc (get regs :pc)
-         size (get instr-size 76)]
-    (assoc-in regs [:pc] (addr rom pc size))))
+         size (get instr-size 0x4C)
+         address (addr rom pc size)]
+    (assoc-in regs [:pc] (- address 0xC000))))
 
 (defn dis-once [rom pc]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
