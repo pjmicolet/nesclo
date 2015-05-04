@@ -168,8 +168,8 @@
   (op rom regs))
 
 (defn execute-instr [rom regs]
-  (dis-once rom (get regs :pc))
   (let [ inst (get @instr-ops (nth rom (get regs :pc)) "Last") ]
+  (dis-once rom (get regs :pc))
   (when (not= inst "Last")
     (recur rom (run inst rom regs)))))
 
