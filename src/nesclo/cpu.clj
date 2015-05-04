@@ -1,5 +1,8 @@
 (ns nesclo.cpu)
 
+;; So this is a mutable state, which is BAD in FUNCTIONAL PROGRAMMING
+(def instr-ops (atom {}))
+
 ;;Define how large an instruction is beyond the instruction itself
 (def instr-size  [0 2 0 0 0 1 1 0 0 1 0 0 0 2 2 0
                  1 2 0 0 0 1 1 0 0 2 0 0 0 2 2 0
@@ -74,6 +77,12 @@
     (condp = size
       1 (nth rom (+ pc size))
       2 (+ (bit-shift-left (nth rom (+ pc size)) 8) (addr rom pc (- size 1))))))
+
+(defmacro def-instr
+  [name opcode args & code]
+  `(do (defn ~name ~args
+         ~@code)
+       (swap! instr-ops assoc ~opcode ~name)))
 
 (defn disassemble [rom pc]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
