@@ -2,6 +2,7 @@
 
 ;; So this is a mutable state, which is BAD in FUNCTIONAL PROGRAMMING
 (def instr-ops (atom {}))
+(def ram (atom (byte-array 65535)))
 
 ;;Define how large an instruction is beyond the instruction itself
 (def instr-size  [0 2 0 0 0 1 1 0 0 1 0 0 0 2 2 0
