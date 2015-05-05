@@ -104,6 +104,18 @@
          ~@code)
        (swap! instr-ops assoc ~opcode ~name)))
 
+(def-instr jsr-abs 0x20 [rom regs]
+  (let [ new-stack (- (get regs :s) 1)
+        size (get instr-size 0x20)
+        return-address (+ (get regs :pc) 2)
+        top-addr (bit-shift-right (bit-and return-address 0xF0) 8)
+        low-addr (bit-and return-address 0x0F)]
+    (aset-byte @ram new-stack low-addr)
+    (aset-byte @ram (- new-stack 1) top-addr)
+    (-> regs
+        (assoc-in [:s] (- new-stack 1))
+        (assoc-in [:pc] (- (addr rom (get regs :pc) size) 0xC000)))))
+
 (def-instr jmp-abs 0x4C [rom regs]
   (let [ pc (get regs :pc)
          size (get instr-size 0x4C)
@@ -125,6 +137,13 @@
                     (bit-or (get regs :p) 0x80)
                     (get regs :p)))
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
+
+(def-instr nop 0xEA [rom regs]
+  (assoc-in regs [:pc] (+ (get regs :pc) 1)))
+
+(def-instr stx-zp 0x86 [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 1) (byte (get regs :x)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 2)))
 
 (defn dis-once [rom pc]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
