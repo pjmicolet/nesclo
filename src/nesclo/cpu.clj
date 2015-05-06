@@ -32,7 +32,7 @@
          "rts" "adc" "kil" "rra" "nop" "adc" "ror" "rra" "pla" "adc" "ror" "arr" "jmp" "adc" "ror" "rra"
          "bvs" "adc" "kil" "rra" "nop" "adc" "ror" "rra" "sei" "adc" "nop" "rra" "nop" "adc" "ror" "rra"
          "nop" "sta" "nop" "sax" "sty" "sta" "stx" "sax" "dey" "nop" "txa" "xaa" "sty" "sta" "stx" "sax"
-         "bbc" "sta" "kil" "ahx" "sty" "sta" "stx" "sax" "tya" "sta" "txs" "tas" "shy" "sta" "shx" "ahx"
+         "bcc" "sta" "kil" "ahx" "sty" "sta" "stx" "sax" "tya" "sta" "txs" "tas" "shy" "sta" "shx" "ahx"
          "ldy" "lda" "ldx" "lax" "ldy" "lda" "ldx" "lax" "tay" "lda" "tax" "lax" "ldy" "lda" "ldx" "lax"
          "bcs" "lda" "kil" "lax" "ldy" "lda" "ldx" "lax" "clv" "lda" "tsx" "las" "ldy" "lda" "ldx" "lax"
          "cpy" "cmp" "nop" "dcp" "cpy" "cmp" "dec" "dcp" "iny" "cmp" "dex" "axs" "cpy" "cmp" "dec" "dcp"
@@ -104,6 +104,11 @@
          ~@code)
        (swap! instr-ops assoc ~opcode ~name)))
 
+(def-instr clc 0x18 [rom regs]
+  (-> regs
+      (assoc-in [:p] (bit-and (get regs :p) 0xFE))
+      (assoc-in [:pc] (+ (get regs :pc) 1))))
+
 (def-instr jsr-abs 0x20 [rom regs]
   (let [ new-stack (- (get regs :s) 1)
         size (get instr-size 0x20)
@@ -116,11 +121,26 @@
         (assoc-in [:s] (- new-stack 1))
         (assoc-in [:pc] (- (addr rom (get regs :pc) size) 0xC000)))))
 
+(def-instr sec 0x38 [rom regs]
+  (-> regs
+    (assoc-in [:p] (bit-or (get regs :p) 0x01))
+    (assoc-in [:pc] (+ (get regs :pc) 1))))
+
 (def-instr jmp-abs 0x4C [rom regs]
   (let [ pc (get regs :pc)
          size (get instr-size 0x4C)
          address (addr rom pc size)]
     (assoc-in regs [:pc] (- address 0xC000))))
+
+(def-instr stx-zp 0x86 [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 1) (byte (get regs :x)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 2)))
+
+; Still need to figure out how to do signed byte
+(def-instr bcc 0x90 [rom regs]
+  (if (= (bit-and (get regs :p) 0x01) 0x00)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
 (def-instr ldx-imm 0xA2 [rom regs]
   (let [ pc (get regs :pc)
@@ -138,12 +158,19 @@
                     (get regs :p)))
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
+; Still need to figure out how to do signed byte
+(def-instr bcs 0xB0 [rom regs]
+  (if (= (bit-and (get regs :p) 0x01) 0x01)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1) 2)))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
 (def-instr nop 0xEA [rom regs]
   (assoc-in regs [:pc] (+ (get regs :pc) 1)))
 
-(def-instr stx-zp 0x86 [rom regs]
-  (aset-byte @ram (addr rom (get regs :pc) 1) (byte (get regs :x)))
-  (assoc-in regs [:pc] (+ (get regs :pc) 2)))
+(def-instr beq 0xF0 [rom regs]
+  (if (= (bit-and (get regs :p) 0x02) 0x02)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
 (defn disassemble [rom pc recurse]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
@@ -162,6 +189,7 @@
          8 (printf "0x%05x => %s $%04x,X\n" pc inst (addr rom pc size))
          9 (printf "0x%05x => %s $%04x,Y\n" pc inst (addr rom pc size))
          10 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size))
+      ;; 11 is wrong right now
          11 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size)))
 
     (when (= recurse 1)
