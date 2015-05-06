@@ -145,17 +145,13 @@
 (def-instr ldx-imm 0xA2 [rom regs]
   (let [ pc (get regs :pc)
          p (get regs :p)
-         data (addr rom pc 1)]
+         data (addr rom pc 1)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
     (-> regs
         (assoc-in [:x] data)
-        (assoc-in [:p]
-                  (if (= data 0x0)
-                    (bit-or (get regs :p) 0x02)
-                    (get regs :p)))
-        (assoc-in [:p]
-                  (if (= 0x40 (bit-and data 0x40))
-                    (bit-or (get regs :p) 0x80)
-                    (get regs :p)))
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] ( + (get regs :pc) 2)))))
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
 ; Still need to figure out how to do signed byte
