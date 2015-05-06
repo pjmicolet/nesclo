@@ -133,7 +133,7 @@
     (assoc-in regs [:pc] (- address 0xC000))))
 
 (def-instr stx-zp 0x86 [rom regs]
-  (aset-byte @ram (addr rom (get regs :pc) 1) (byte (get regs :x)))
+  (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :x)))
   (assoc-in regs [:pc] (+ (get regs :pc) 2)))
 
 ; Still need to figure out how to do signed byte
