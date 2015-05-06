@@ -132,6 +132,20 @@
          address (addr rom pc size)]
     (assoc-in regs [:pc] (- address 0xC000))))
 
+(def-instr bvc-rel 0x50 [rom regs]
+  (if (= (bit-and (get regs :p) 0x20) 0x00)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr bvs-rel 0x70 [rom regs]
+  (if (= (bit-and (get regs :p) 0x20) 0x20)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr sta-zp 0x85 [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :a)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 2)))
+
 (def-instr stx-zp 0x86 [rom regs]
   (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :x)))
   (assoc-in regs [:pc] (+ (get regs :pc) 2)))
@@ -152,12 +166,27 @@
         (assoc-in [:x] data)
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
+
+(def-instr lda-imm 0xA9 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         data (addr rom pc 1)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:a] data)
+        (assoc-in [:p] meta-stat)
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
 ; Still need to figure out how to do signed byte
 (def-instr bcs 0xB0 [rom regs]
   (if (= (bit-and (get regs :p) 0x01) 0x01)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1) 2)))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr bed 0xD0 [rom regs]
+  (if (= (bit-and (get regs :p) 0x02) 0x00)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
 (def-instr nop 0xEA [rom regs]
