@@ -137,8 +137,9 @@
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
+
 (def-instr bvs-rel 0x70 [rom regs]
-  (if (= (bit-and (get regs :p) 0x20) 0x20)
+  (if (= (bit-and (get regs :p) 0x40) 0x40)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
