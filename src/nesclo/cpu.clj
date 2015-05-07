@@ -110,15 +110,15 @@
       (assoc-in [:pc] (+ (get regs :pc) 1))))
 
 (def-instr jsr-abs 0x20 [rom regs]
-  (let [ new-stack (- (get regs :s) 1)
+  (let [ new-stack (get regs :s) 
         size (get instr-size 0x20)
         return-address (+ (get regs :pc) 2)
-        top-addr (bit-shift-right (bit-and return-address 0xF0) 8)
-        low-addr (bit-and return-address 0x0F)]
-    (aset-byte @ram new-stack low-addr)
-    (aset-byte @ram (- new-stack 1) top-addr)
+        top-addr (bit-shift-right (bit-and return-address 0xFF00) 8)
+        low-addr (bit-and return-address 0x00FF)]
+    (aset-byte @ram new-stack (unchecked-byte low-addr))
+    (aset-byte @ram (- new-stack 1) (unchecked-byte top-addr))
     (-> regs
-        (assoc-in [:s] (- new-stack 1))
+        (assoc-in [:s] (- new-stack 2))
         (assoc-in [:pc] (- (addr rom (get regs :pc) size) 0xC000)))))
 
 (def-instr sec 0x38 [rom regs]
