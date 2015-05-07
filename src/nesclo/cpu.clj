@@ -133,7 +133,7 @@
     (assoc-in regs [:pc] (- address 0xC000))))
 
 (def-instr bvc-rel 0x50 [rom regs]
-  (if (= (bit-and (get regs :p) 0x20) 0x00)
+  (if (= (bit-and (get regs :p) 0x40) 0x00)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
