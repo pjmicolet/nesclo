@@ -198,34 +198,35 @@
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
 (defn disassemble [rom pc recurse]
+(defn disassemble [rom pc regs recurse]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
   (when (not= inst "Last Instruction")
     (let [ addressing (get type-addr-diss (nth rom pc "No pc") "Nil")
           size (get instr-size (nth rom pc))]
     (condp = addressing
-         0 (printf "0x%05x => %s\n" pc inst)
-         1 (printf "0x%05x => %s #$%02x\n" pc inst (addr rom pc size))
-         2 (printf "0x%05x => %s $%02x\n" pc inst (addr rom pc size))
-         3 (printf "0x%05x => %s $%02x,X\n" pc inst (addr rom pc size))
-         4 (printf "0x%05x => %s $%02x,Y\n" pc inst (addr rom pc size))
-         5 (printf "0x%05x => %s ($%02x,X)\n" pc inst (addr rom pc size))
-         6 (printf "0x%05x => %s ($%02x,Y)\n" pc inst (addr rom pc size))
-         7 (printf "0x%05x => %s $%04x\n" pc inst (addr rom pc size))
-         8 (printf "0x%05x => %s $%04x,X\n" pc inst (addr rom pc size))
-         9 (printf "0x%05x => %s $%04x,Y\n" pc inst (addr rom pc size))
-         10 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size))
+         0 (printf "0x%05x => %s %s\n" pc inst regs)
+         1 (printf "0x%05x => %s #$%02x %s\n" pc inst (addr rom pc size) regs)
+         2 (printf "0x%05x => %s $%02x %s\n" pc inst (addr rom pc size) regs)
+         3 (printf "0x%05x => %s $%02x,X %s\n" pc inst (addr rom pc size) regs)
+         4 (printf "0x%05x => %s $%02x,Y %s\n" pc inst (addr rom pc size) regs)
+         5 (printf "0x%05x => %s ($%02x,X) %s\n" pc inst (addr rom pc size) regs)
+         6 (printf "0x%05x => %s ($%02x,Y) %s\n" pc inst (addr rom pc size) regs)
+         7 (printf "0x%05x => %s $%04x %s\n" pc inst (addr rom pc size) regs)
+         8 (printf "0x%05x => %s $%04x,X %s\n" pc inst (addr rom pc size) regs)
+         9 (printf "0x%05x => %s $%04x,Y %s\n" pc inst (addr rom pc size) regs)
+         10 (printf "0x%05x => %s ($%04x) %s\n" pc inst (addr rom pc size) regs)
       ;; 11 is wrong right now
-         11 (printf "0x%05x => %s ($%04x)\n" pc inst (addr rom pc size)))
+         11 (printf "0x%05x => %s ($%04x) %s\n" pc inst (addr rom pc size) regs))
 
     (when (= recurse 1)
-    (recur rom (+ size (inc pc)) 1))))))
+    (recur rom (+ size (inc pc)) regs 1))))))
 
 (defn run [op rom regs]
   (op rom regs))
 
 (defn execute-instr [rom regs]
   (let [ inst (get @instr-ops (nth rom (get regs :pc)) "Last") ]
-  (disassemble rom (get regs :pc) 0)
+  (disassemble rom (get regs :pc) regs 0)
   (when (not= inst "Last")
     (recur rom (run inst rom regs)))))
 
