@@ -104,6 +104,18 @@
          ~@code)
        (swap! instr-ops assoc ~opcode ~name)))
 
+(def-instr php 0x08 [rom regs]
+  (let [ preg (get regs :p) ]
+    (aset-byte @ram (get regs :s)  (unchecked-byte preg))
+    (-> regs
+        (assoc-in [:s] (- (get regs :s) 1))
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr bpl-rel 0x10 [rom regs]
+  (if (= (bit-and (get regs :p) 0x80) 0x00)
+    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
+    (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
 (def-instr clc 0x18 [rom regs]
   (-> regs
       (assoc-in [:p] (bit-and (get regs :p) 0xFE))
@@ -121,6 +133,18 @@
         (assoc-in [:s] (- new-stack 2))
         (assoc-in [:pc] (- (addr rom (get regs :pc) size) 0xC000)))))
 
+(def-instr bit-zp 0x24 [rom regs]
+  (let [ data (get @ram (addr rom (get regs :pc) 1))
+         p (get regs :p)
+         six-seven (bit-or (bit-and data 0x80) (bit-and data 0x40))
+         a (get regs :a)
+         toset (if (= (bit-and data a) 0x00) 0x02 0x00)
+         final-stat (bit-or six-seven toset)
+         stat (bit-and (bit-or p final-stat) (bit-or final-stat 0x3D))]
+    (-> regs
+        (assoc-in [:p] stat)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr sec 0x38 [rom regs]
   (-> regs
     (assoc-in [:p] (bit-or (get regs :p) 0x01))
@@ -137,11 +161,33 @@
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
+(def-instr rts-imp 0x60 [rom regs]
+  (let [ new-stack (+ (get regs :s) 1)
+         top-addr (unchecked-byte (get @ram new-stack))
+         low-addr (unchecked-byte (get @ram (+ new-stack 1)))
+         new-pc (+ (bit-shift-left top-addr 8) (bit-and low-addr 0x00FF))]
+    (-> regs
+      (assoc-in [:pc] (+ new-pc 1))
+      (assoc-in [:s] (+ new-stack 2)))))
+
+(def-instr pla 0x68 [rom regs]
+  (let [ new-stack (+ (get regs :s) 1)
+         data (get @ram new-stack)]
+    (-> regs
+        (assoc-in [:a] data)
+        (assoc-in [:s] new-stack)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr bvs-rel 0x70 [rom regs]
   (if (= (bit-and (get regs :p) 0x40) 0x40)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr sei-imp 0x78 [rom regs]
+  (let [ int-flag (bit-or (get regs :p) 0x4)]
+    (-> regs
+        (assoc-in [:p] int-flag)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr sta-zp 0x85 [rom regs]
   (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :a)))
@@ -197,6 +243,12 @@
   (if (= (bit-and (get regs :p) 0x02) 0x02)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr sed 0xF8 [rom regs]
+  (let [ dec-flag (bit-or (get regs :p) 0x8)]
+    (-> regs
+        (assoc-in [:p] dec-flag)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (defn disassemble [rom pc regs recurse]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
