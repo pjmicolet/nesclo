@@ -198,7 +198,6 @@
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
-(defn disassemble [rom pc recurse]
 (defn disassemble [rom pc regs recurse]
   (let [ inst (get instr (nth rom pc "No more PC") "Last Instruction") ]
   (when (not= inst "Last Instruction")
