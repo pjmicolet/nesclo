@@ -284,7 +284,7 @@
 
 (defn start-rom [rom pc]
   ;; Will do some initialisation here
-  (let [ registers {:pc 0 :a 0x00 :x 0x00 :y 0x00 :s 0xFD :p 0x34}]
+  (let [ registers {:pc 0 :a 0x00 :x 0x00 :y 0x00 :s 0xFD :p 0x24}]
     (printf "Starting at 0x%02x\n" pc)
     (printf "Registers are %s\n" (get registers :pc))
     (execute-instr rom (assoc-in registers [:pc] pc))
