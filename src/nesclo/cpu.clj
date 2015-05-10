@@ -111,6 +111,19 @@
         (assoc-in [:s] (- (get regs :s) 1))
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
+(def-instr ora-imm 0x09 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         new-a (bit-or (get regs :a) data)
+         p (get regs :p)
+         zero (if (= 0 new-a) 0x2 0x0)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7D))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr bpl-rel 0x10 [rom regs]
   (if (= (bit-and (get regs :p) 0x80) 0x00)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
@@ -145,16 +158,63 @@
         (assoc-in [:p] stat)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
+(def-instr plp 0x28 [rom regs]
+  (let [ new-stack (+ (get regs :s) 1)
+         data (bit-or (bit-and (bit-and (get @ram new-stack) 0xFF) 0xEF) 0x20) ]
+    (-> regs
+        (assoc-in [:p] data)
+        (assoc-in [:s] new-stack)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr and-imm 0x29 [rom regs]
+  (let [ p (get regs :p)
+         data (addr rom (get regs :pc) 1)
+         anded-a (bit-and data (get regs :a))
+         overflow (bit-and anded-a 0x80)
+         zero (if (= anded-a 0) 0x02 0x00)
+         apply-stat (bit-or zero overflow)
+         stat (bit-and (bit-or  p apply-stat) (bit-or apply-stat 0x7D))]
+    (-> regs
+        (assoc-in [:a] anded-a)
+        (assoc-in [:p] stat)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+         
+(def-instr bmi 0x30 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         state (get regs :p)]
+    (-> regs
+        (assoc-in [:pc] ( if (= (bit-and state 0x80) 0x80) (+ (+ (get regs :pc) data) 2) (+ (get regs :pc) 2))))))
+
 (def-instr sec 0x38 [rom regs]
   (-> regs
     (assoc-in [:p] (bit-or (get regs :p) 0x01))
     (assoc-in [:pc] (+ (get regs :pc) 1))))
+
+(def-instr pha 0x48 [rom regs]
+  (aset-byte @ram (get regs :s) (unchecked-byte (get regs :a)))
+  (-> regs
+      (assoc-in [:s] (- (get regs :s) 1))
+      (assoc-in [:pc] (+ (get regs :pc) 1))))
 
 (def-instr jmp-abs 0x4C [rom regs]
   (let [ pc (get regs :pc)
          size (get instr-size 0x4C)
          address (addr rom pc size)]
     (assoc-in regs [:pc] (- address 0xC000))))
+
+(def-instr eor-imm 0x49 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         a (get regs :a)
+         new-a (bit-xor data a)
+         p (get regs :p)
+         zero (if (= 0 new-a) 0x2 0x0)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7D))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
 (def-instr bvc-rel 0x50 [rom regs]
   (if (= (bit-and (get regs :p) 0x40) 0x00)
@@ -184,6 +244,25 @@
         (assoc-in [:s] new-stack)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
+(def-instr adc-imm 0x69 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         carry (if (= (bit-and (get regs :p) 0x1) 0x1) 1 0)
+         a (get regs :a)
+         p (get regs :p)
+         adc (bit-and (+ data a carry) 0xFF)
+         zero (if (= 0 adc) 0x02 0x00)
+         overflow (if (= 0 (bit-and (bit-not (bit-xor a data)) (bit-xor a adc) 0x80)) 0 0x40)
+         negative (if (= (bit-and adc 0x80) 0x80) 0x80 0)
+         carry-flag (if (= 
+                         (bit-and (+ (bit-and a 0xFFF) (bit-and data 0xFFF) (bit-and carry 0xFFF)) 0x100) 0x100)
+                      0x01 0x00)
+         status (bit-or overflow negative carry-flag zero)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] adc)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr bvs-rel 0x70 [rom regs]
   (if (= (bit-and (get regs :p) 0x40) 0x40)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
@@ -208,6 +287,17 @@
   (if (= (bit-and (get regs :p) 0x01) 0x00)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr ldy-imm 0xA0 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         data (addr rom pc 1)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:y] data)
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
 (def-instr ldx-imm 0xA2 [rom regs]
   (let [ pc (get regs :pc)
@@ -237,10 +327,34 @@
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1) 2)))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
+(def-instr clv 0xB8 [rom regs]
+  (let [ p (bit-and (get regs :p) 0xBF) ]
+    (-> regs
+        (assoc-in [:p] p)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr cmp-imm 0xC9 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         p (get regs :p)
+         is-bigger (if (> (get regs :a) data) 0x01 0x00)
+         is-equal (if (= (get regs :a) data) 0x03 0x00)
+         is-neg (if (= (bit-and (- (get regs :a) data) 0x80)0x80) 0x80 0x00)
+         set-status (bit-or is-bigger is-equal is-neg)
+         status (bit-and (bit-or p set-status) (bit-or set-status 0x7C))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr bed 0xD0 [rom regs]
   (if (= (bit-and (get regs :p) 0x02) 0x00)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr cld 0xD8 [rom regs]
+  (let [ status (bit-and (get regs :p) 0xF7)]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr nop 0xEA [rom regs]
   (assoc-in regs [:pc] (+ (get regs :pc) 1)))
