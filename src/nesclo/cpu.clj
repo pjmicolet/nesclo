@@ -282,11 +282,59 @@
   (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :x)))
   (assoc-in regs [:pc] (+ (get regs :pc) 2)))
 
+(def-instr decy 0x88 [rom regs]
+  (let [y (get regs :y)
+        p (get regs :p)
+        decy (dec y)
+        zero (if (= decy 0) 0x02 0x00)
+        neg-flag (if (= (bit-and decy 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:y] decy)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr txa 0x8A [rom regs]
+  (let [x (get regs :x)
+        p (get regs :p)
+        zero (if (= x 0) 0x02 0x00)
+        neg-flag (if (= (bit-and x 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] x)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr stx-abs 0x8E [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :x)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 3)))
+
 ; Still need to figure out how to do signed byte
 (def-instr bcc 0x90 [rom regs]
   (if (= (bit-and (get regs :p) 0x01) 0x00)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
+
+(def-instr tya 0x98 [rom regs]
+  (let [y (get regs :y)
+        p (get regs :p)
+        zero (if (= y 0) 0x02 0x00)
+        neg-flag (if (= (bit-and y 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] y)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr txs 0x9A [rom regs]
+  (let [x (get regs :x)
+        p (get regs :p)]
+    (-> regs
+        (assoc-in [:s] x)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr ldy-imm 0xA0 [rom regs]
   (let [ pc (get regs :pc)
@@ -310,6 +358,18 @@
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
+(def-instr tay 0xA8 [rom regs]
+  (let [a (get regs :a)
+        p (get regs :p)
+        zero (if (= a 0) 0x02 0x00)
+        neg-flag (if (= (bit-and a 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:y] a)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
 (def-instr lda-imm 0xA9 [rom regs]
   (let [ pc (get regs :pc)
          p (get regs :p)
@@ -321,6 +381,42 @@
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
+(def-instr tax 0xAA [rom regs]
+  (let [a (get regs :a)
+        p (get regs :p)
+        zero (if (= a 0) 0x02 0x00)
+        neg-flag (if (= (bit-and a 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:x] a)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr lda-abs 0xAD [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         where (addr rom pc 2)
+         data (get @ram where)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:a] data)
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] ( + (get regs :pc) 3)))))
+
+(def-instr ldx-abs 0xAE [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         where (addr rom pc 2)
+         data (get @ram where)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:x] data)
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] ( + (get regs :pc) 3)))))
+
 ; Still need to figure out how to do signed byte
 (def-instr bcs 0xB0 [rom regs]
   (if (= (bit-and (get regs :p) 0x01) 0x01)
@@ -331,6 +427,44 @@
   (let [ p (bit-and (get regs :p) 0xBF) ]
     (-> regs
         (assoc-in [:p] p)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr tsx 0xBA [rom regs]
+  (let [s (get regs :s)
+        p (get regs :p)
+        zero (if (= s 0) 0x02 0x00)
+        neg-flag (if (= (bit-and s 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:x] s)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+         
+
+(def-instr cpy-imm 0xC0 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         p (get regs :p)
+         is-bigger (if (> (get regs :y) data) 0x01 0x00)
+         is-equal (if (= (get regs :y) data) 0x03 0x00)
+         is-neg (if (= (bit-and (- (get regs :y) data) 0x80)0x80) 0x80 0x00)
+         set-status (bit-or is-bigger is-equal is-neg)
+         status (bit-and (bit-or p set-status) (bit-or set-status 0x7C))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
+(def-instr iny 0xC8 [rom regs]
+  (let [y (get regs :y)
+        p (get regs :p)
+        incy (inc y)
+        zero (if (= incy 0) 0x02 0x00)
+        neg-flag (if (= (bit-and incy 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:y] incy)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr cmp-imm 0xC9 [rom regs]
@@ -345,6 +479,19 @@
         (assoc-in [:p] status)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
+(def-instr decy 0xCA [rom regs]
+  (let [x (get regs :x)
+        p (get regs :p)
+        decx (dec x)
+        zero (if (= decx 0) 0x02 0x00)
+        neg-flag (if (= (bit-and decx 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:y] decx)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
 (def-instr bed 0xD0 [rom regs]
   (if (= (bit-and (get regs :p) 0x02) 0x00)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
@@ -355,6 +502,51 @@
     (-> regs
         (assoc-in [:p] status)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr cpx-imm 0xE0 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         p (get regs :p)
+         is-bigger (if (> (get regs :x) data) 0x01 0x00)
+         is-equal (if (= (get regs :x) data) 0x03 0x00)
+         is-neg (if (= (bit-and (- (get regs :x) data) 0x80)0x80) 0x80 0x00)
+         set-status (bit-or is-bigger is-equal is-neg)
+         status (bit-and (bit-or p set-status) (bit-or set-status 0x7C))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
+(def-instr inx 0xE8 [rom regs]
+  (let [x (get regs :x)
+        p (get regs :p)
+        incx (inc x)
+        zero (if (= incx 0) 0x02 0x00)
+        neg-flag (if (= (bit-and incx 0x80) 0x80) 0x80 0x00)
+        status (bit-or zero neg-flag)
+        meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:x] incx)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr sbc-imm 0xE9 [rom regs]
+  (let [ data (addr rom (get regs :pc) 1)
+         carry (if (= (bit-and (get regs :p) 0x01) 0x01) 0x01 0x00)
+         not-carry (bit-and (bit-not carry) 0x01)
+         a (get regs :a)
+         p (get regs :p)
+         sbc (bit-and (- a data not-carry) 0xFF)
+         zero (if (= 0 sbc) 0x02 0x00)
+         overflow (if (= 0 (bit-and (bit-xor a data) (bit-xor a sbc) 0x80)) 0x00 0x40)
+         negative (if (= (bit-and sbc 0x80) 0x80) 0x80 0)
+         carry-flag (if (= 
+                         (bit-and (- (bit-and a 0xFFF) (bit-and data 0xFFF) (bit-and not-carry 0xFFF)) 0x100) 0x100)
+                      0x00 0x01)
+         status (bit-or overflow negative carry-flag zero)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] sbc)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
 (def-instr nop 0xEA [rom regs]
   (assoc-in regs [:pc] (+ (get regs :pc) 1)))
