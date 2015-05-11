@@ -106,7 +106,7 @@
 
 (def-instr php 0x08 [rom regs]
   (let [ preg (get regs :p) ]
-    (aset-byte @ram (get regs :s)  (unchecked-byte preg))
+    (aset-byte @ram (bit-or 0x100 (get regs :s))  (unchecked-byte preg))
     (-> regs
         (assoc-in [:s] (- (get regs :s) 1))
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
@@ -140,8 +140,8 @@
         return-address (+ (get regs :pc) 2)
         top-addr (bit-shift-right (bit-and return-address 0xFF00) 8)
         low-addr (bit-and return-address 0x00FF)]
-    (aset-byte @ram new-stack (unchecked-byte low-addr))
-    (aset-byte @ram (- new-stack 1) (unchecked-byte top-addr))
+    (aset-byte @ram (bit-or 0x100 new-stack) (unchecked-byte top-addr))
+    (aset-byte @ram (bit-or 0x100 (- new-stack 1)) (unchecked-byte low-addr))
     (-> regs
         (assoc-in [:s] (- new-stack 2))
         (assoc-in [:pc] (- (addr rom (get regs :pc) size) 0xC000)))))
@@ -160,7 +160,7 @@
 
 (def-instr plp 0x28 [rom regs]
   (let [ new-stack (+ (get regs :s) 1)
-         data (bit-or (bit-and (bit-and (get @ram new-stack) 0xFF) 0xEF) 0x20) ]
+         data (bit-or (bit-and (bit-and (get @ram (bit-or 0x100 new-stack)) 0xFF) 0xEF) 0x20) ]
     (-> regs
         (assoc-in [:p] data)
         (assoc-in [:s] new-stack)
@@ -191,7 +191,7 @@
     (assoc-in [:pc] (+ (get regs :pc) 1))))
 
 (def-instr pha 0x48 [rom regs]
-  (aset-byte @ram (get regs :s) (unchecked-byte (get regs :a)))
+  (aset-byte @ram (bit-or 0x100 (get regs :s)) (unchecked-byte (get regs :a)))
   (-> regs
       (assoc-in [:s] (- (get regs :s) 1))
       (assoc-in [:pc] (+ (get regs :pc) 1))))
@@ -221,19 +221,18 @@
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
     (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
-(def-instr rts-imp 0x60 [rom regs]
-  (let [ new-stack (+ (get regs :s) 1)
-         top-addr (bit-and (get @ram new-stack) 0xFF)
-         low-addr (bit-and (get @ram (+ new-stack 1)) 0xFF)
-         new-pc (+ (bit-shift-left top-addr 8) (bit-and low-addr 0x00FF))]
+(def-instr rts 0x60 [rom regs]
+  (let [ new-stack (+ (bit-and (get regs :s) 0x0FF) 1)
+         low-addr (bit-and (get @ram (bit-or 0x100 new-stack)) 0x0FF)
+         top-addr (bit-and (get @ram (bit-or 0x100 (+ new-stack 1))) 0x0FF)
     (-> regs
       (assoc-in [:pc] (+ new-pc 1))
-      (assoc-in [:s] (+ new-stack 2)))))
+      (assoc-in [:s] (+ new-stack 1)))))
 
 (def-instr pla 0x68 [rom regs]
   (let [ new-stack (+ (get regs :s) 1)
          p (get regs :p)
-         data (bit-and (get @ram new-stack) 0xFF)
+         data (bit-and (get @ram (bit-or 0x100 new-stack)) 0xFF)
          zero (if (= 0 data) 0x2 0x0)
          overflow (if (= (bit-and data 0x80) 0x80) 0x80 0x0)
          overzero (bit-or overflow zero)
