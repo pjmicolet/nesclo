@@ -489,7 +489,7 @@
         meta-status (bit-and (bit-or p status) (bit-or status 0x7D))]
     (-> regs
         (assoc-in [:p] meta-status)
-        (assoc-in [:y] decx)
+        (assoc-in [:x] decx)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr bed 0xD0 [rom regs]
