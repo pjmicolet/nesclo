@@ -282,7 +282,7 @@
   (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :x)))
   (assoc-in regs [:pc] (+ (get regs :pc) 2)))
 
-(def-instr decy 0x88 [rom regs]
+(def-instr dey 0x88 [rom regs]
   (let [y (get regs :y)
         p (get regs :p)
         decy (dec y)
@@ -479,7 +479,7 @@
         (assoc-in [:p] status)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
-(def-instr decy 0xCA [rom regs]
+(def-instr dex 0xCA [rom regs]
   (let [x (get regs :x)
         p (get regs :p)
         decx (dec x)
