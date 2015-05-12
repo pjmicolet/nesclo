@@ -104,6 +104,27 @@
          ~@code)
        (swap! instr-ops assoc ~opcode ~name)))
 
+(def-instr ora-indx 0x01 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         x (get regs :x)
+         operand (addr rom pc 1)
+         addr-address (bit-and (+ operand x) 0x0FF)
+         address-part1 (get @ram (bit-and addr-address 0x0FF))
+         address-part2 (get @ram (bit-and (+ addr-address 1) 0x0FF))
+         address (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))
+         data (bit-and (get @ram address) 0x0FF)
+         new-a (bit-or (get regs :a) data)
+         zero (if (= 0 new-a) 0x2 0x0)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7D))]
+    (println data)
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr php 0x08 [rom regs]
   (let [ preg (get regs :p) ]
     (aset-byte @ram (bit-or 0x100 (get regs :s))  (unchecked-byte preg))
@@ -123,6 +144,20 @@
         (assoc-in [:p] status)
         (assoc-in [:a] new-a)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
+(def-instr asl-acc 0x0A [rom regs]
+  (let [ a (get regs :a)
+         shifted-a (bit-and (bit-shift-left a 1) 0x0FF)
+         p (get regs :p)
+         zero (if (= shifted-a 0x0) 0x02 0x00)
+         carry (if (= (bit-and a 0x80) 0x80) 0x01 0x00)
+         neg (if (= (bit-and shifted-a 0x80) 0x80) 0x80 0x00)
+         status (bit-or zero carry neg)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x7C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] shifted-a)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr bpl-rel 0x10 [rom regs]
   (if (= (bit-and (get regs :p) 0x80) 0x00)
@@ -145,6 +180,26 @@
     (-> regs
         (assoc-in [:s] (- new-stack 2))
         (assoc-in [:pc] (- (addr rom (get regs :pc) size) 0xC000)))))
+
+(def-instr and-indx 0x21 [rom regs]
+  (let [ p (get regs :p)
+         x (get regs :x)
+         pc (get regs :pc)
+         operand (addr rom pc 1)
+         addr-address (bit-and (+ operand x) 0x0FF)
+         address-part1 (get @ram (bit-and addr-address 0x0FF))
+         address-part2 (get @ram (bit-and (+ addr-address 1) 0x0FF))
+         address (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))
+         data (bit-and (get @ram address) 0x0FF)
+         anded-a (bit-and data (get regs :a))
+         overflow (bit-and anded-a 0x80)
+         zero (if (= anded-a 0) 0x02 0x00)
+         apply-stat (bit-or zero overflow)
+         stat (bit-and (bit-or  p apply-stat) (bit-or apply-stat 0x7D))]
+    (-> regs
+        (assoc-in [:a] anded-a)
+        (assoc-in [:p] stat)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
 (def-instr bit-zp 0x24 [rom regs]
   (let [ data (bit-and (get @ram (addr rom (get regs :pc) 1)) 0xFF)
@@ -178,6 +233,20 @@
         (assoc-in [:a] anded-a)
         (assoc-in [:p] stat)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
+(def-instr rol-acc 0x2A [rom regs]
+  (let [ a (get regs :a)
+         p (get regs :p)
+         shifted-a (bit-or (bit-and (bit-shift-left a 1) 0x0FF) (bit-and 0x01 p))
+         zero (if (= shifted-a 0x0) 0x02 0x00)
+         carry (if (= (bit-and a 0x80) 0x80) 0x01 0x00)
+         neg (if (= (bit-and shifted-a 0x80) 0x80) 0x80 0x00)
+         status (bit-or zero carry neg)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x7C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] shifted-a)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
          
 (def-instr bmi 0x30 [rom regs]
   (let [ data (addr rom (get regs :pc) 1)
@@ -190,11 +259,61 @@
     (assoc-in [:p] (bit-or (get regs :p) 0x01))
     (assoc-in [:pc] (+ (get regs :pc) 1))))
 
+(def-instr rti 0x40 [rom regs]
+  (let [ s (get regs :s)
+         p-reg-pos (+ s 1)
+         pc-part1 (+ s 2)
+         pc-part2 (+ s 3)
+         p (bit-or (bit-and (get @ram (bit-or 0x100 p-reg-pos)) 0x0FF) 0x20)
+         low-addr (bit-and (get @ram (bit-or 0x100 pc-part1)) 0x0FF)
+         top-addr (bit-and (get @ram (bit-or 0x100 pc-part2)) 0x0FF)
+         new-pc (- (+ (bit-shift-left top-addr 8) (bit-and low-addr 0x00FF)) 0xC000)]
+    (-> regs
+        (assoc-in [:p] p)
+        (assoc-in [:s] pc-part2)
+        (assoc-in [:pc] new-pc))))
+
+(def-instr eor-indx 0x41 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         x (get regs :x)
+         operand (addr rom pc 1)
+         addr-address (bit-and (+ operand x) 0x0FF)
+         address-part1 (get @ram (bit-and addr-address 0x0FF))
+         address-part2 (get @ram (bit-and (+ addr-address 1) 0x0FF))
+         address (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))
+         data (bit-and (get @ram address) 0x0FF)
+         a (get regs :a)
+         new-a (bit-xor data a)
+         p (get regs :p)
+         zero (if (= 0 new-a) 0x2 0x0)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7D))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr pha 0x48 [rom regs]
   (aset-byte @ram (bit-or 0x100 (get regs :s)) (unchecked-byte (get regs :a)))
   (-> regs
       (assoc-in [:s] (- (get regs :s) 1))
       (assoc-in [:pc] (+ (get regs :pc) 1))))
+
+(def-instr lsr-acc 0x4A [rom regs]
+  (let [ a (get regs :a)
+         shifted-a (bit-shift-right a 1)
+         p (get regs :p)
+         zero (if (= shifted-a 0x0) 0x02 0x00)
+         carry (if (= (bit-and a 0x01) 0x01) 0x01 0x00)
+         neg (if (= (bit-and shifted-a 0x80) 0x80) 0x80 0x00)
+         status (bit-or zero carry neg)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x7C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] shifted-a)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
 (def-instr jmp-abs 0x4C [rom regs]
   (let [ pc (get regs :pc)
@@ -230,6 +349,33 @@
       (assoc-in [:pc] (+ new-pc 1))
       (assoc-in [:s] (+ new-stack 1)))))
 
+(def-instr adc-indx 0x61 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         x (get regs :x)
+         operand (addr rom pc 1)
+         addr-address (bit-and (+ operand x) 0x0FF)
+         address-part1 (get @ram (bit-and addr-address 0x0FF))
+         address-part2 (get @ram (bit-and (+ addr-address 1) 0x0FF))
+         address (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))
+         data (bit-and (get @ram address) 0x0FF)
+         carry (if (= (bit-and (get regs :p) 0x1) 0x1) 1 0)
+         a (get regs :a)
+         p (get regs :p)
+         adc (bit-and (+ data a carry) 0xFF)
+         zero (if (= 0 adc) 0x02 0x00)
+         overflow (if (= 0 (bit-and (bit-not (bit-xor a data)) (bit-xor a adc) 0x80)) 0 0x40)
+         negative (if (= (bit-and adc 0x80) 0x80) 0x80 0)
+         carry-flag (if (= 
+                         (bit-and (+ (bit-and a 0xFFF) (bit-and data 0xFFF) (bit-and carry 0xFFF)) 0x100) 0x100)
+                      0x01 0x00)
+         status (bit-or overflow negative carry-flag zero)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] adc)
+        (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
 (def-instr pla 0x68 [rom regs]
   (let [ new-stack (+ (get regs :s) 1)
          p (get regs :p)
@@ -263,6 +409,20 @@
         (assoc-in [:a] adc)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
 
+(def-instr ror-acc 0x6A [rom regs]
+  (let [ a (get regs :a)
+         p (get regs :p)
+         shifted-a (bit-or (bit-shift-right a 1) (bit-shift-left (bit-and p 0x01) 7))
+         zero (if (= shifted-a 0x0) 0x02 0x00)
+         carry (if (= (bit-and a 0x01) 0x01) 0x01 0x00)
+         neg (if (= (bit-and shifted-a 0x80) 0x80) 0x80 0x00)
+         status (bit-or zero carry neg)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x7C))]
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] shifted-a)
+        (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
 (def-instr bvs-rel 0x70 [rom regs]
   (if (= (bit-and (get regs :p) 0x40) 0x40)
     (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr rom (get regs :pc) 1)) 2))
@@ -273,6 +433,18 @@
     (-> regs
         (assoc-in [:p] int-flag)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
+
+(def-instr sta-indx 0x81 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         x (get regs :x)
+         operand (addr rom pc 1)
+         addr-address (bit-and (+ operand x) 0x0FF)
+         address-part1 (get @ram (bit-and addr-address 0x0FF))
+         address-part2 (get @ram (bit-and (+ addr-address 1) 0x0FF))
+         address (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))]
+  (aset-byte @ram address (unchecked-byte (get regs :a)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 2))))
 
 (def-instr sta-zp 0x85 [rom regs]
   (aset-byte @ram (addr rom (get regs :pc) 1) (unchecked-byte (get regs :a)))
@@ -311,6 +483,10 @@
   (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :x)))
   (assoc-in regs [:pc] (+ (get regs :pc) 3)))
 
+(def-instr stx-abs 0x8D [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :a)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 3)))
+
 ; Still need to figure out how to do signed byte
 (def-instr bcc 0x90 [rom regs]
   (if (= (bit-and (get regs :p) 0x01) 0x00)
@@ -347,6 +523,23 @@
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
+(def-instr lda-indx 0xA1 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         x (get regs :x)
+         operand (addr rom pc 1)
+         addr-address (bit-and (+ operand x) 0x0FF)
+         address-part1 (get @ram (bit-and addr-address 0x0FF))
+         address-part2 (get @ram (bit-and (+ addr-address 1) 0x0FF))
+         address (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))
+         data (get @ram address)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:a] data)
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] ( + (get regs :pc) 2)))))
+
 (def-instr ldx-imm 0xA2 [rom regs]
   (let [ pc (get regs :pc)
          p (get regs :p)
@@ -355,6 +548,18 @@
          meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
     (-> regs
         (assoc-in [:x] data)
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] ( + (get regs :pc) 2)))))
+
+(def-instr lda-imm 0xA5 [rom regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         address (addr rom pc 1)
+         data (get @ram address)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:a] data)
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] ( + (get regs :pc) 2)))))
 
