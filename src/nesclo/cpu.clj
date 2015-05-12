@@ -285,7 +285,7 @@
 (def-instr dey 0x88 [rom regs]
   (let [y (get regs :y)
         p (get regs :p)
-        decy (dec y)
+        decy (bit-and (dec y) 0x0FF)
         zero (if (= decy 0) 0x02 0x00)
         neg-flag (if (= (bit-and decy 0x80) 0x80) 0x80 0x00)
         status (bit-or zero neg-flag)
@@ -457,7 +457,7 @@
 (def-instr iny 0xC8 [rom regs]
   (let [y (get regs :y)
         p (get regs :p)
-        incy (inc y)
+        incy (bit-and (inc y) 0x0FF)
         zero (if (= incy 0) 0x02 0x00)
         neg-flag (if (= (bit-and incy 0x80) 0x80) 0x80 0x00)
         status (bit-or zero neg-flag)
@@ -482,7 +482,7 @@
 (def-instr dex 0xCA [rom regs]
   (let [x (get regs :x)
         p (get regs :p)
-        decx (dec x)
+        decx (bit-and (dec x) 0x0FF)
         zero (if (= decx 0) 0x02 0x00)
         neg-flag (if (= (bit-and decx 0x80) 0x80) 0x80 0x00)
         status (bit-or zero neg-flag)
@@ -518,7 +518,7 @@
 (def-instr inx 0xE8 [rom regs]
   (let [x (get regs :x)
         p (get regs :p)
-        incx (inc x)
+        incx (bit-and (inc x) 0x0FF)
         zero (if (= incx 0) 0x02 0x00)
         neg-flag (if (= (bit-and incx 0x80) 0x80) 0x80 0x00)
         status (bit-or zero neg-flag)
