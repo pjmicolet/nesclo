@@ -315,12 +315,6 @@
         (assoc-in [:a] shifted-a)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
-(def-instr jmp-abs 0x4C [rom regs]
-  (let [ pc (get regs :pc)
-         size (get instr-size 0x4C)
-         address (addr rom pc size)]
-    (assoc-in regs [:pc] (- address 0xC000))))
-
 (def-instr eor-imm 0x49 [rom regs]
   (let [ data (addr rom (get regs :pc) 1)
          a (get regs :a)
@@ -334,6 +328,27 @@
         (assoc-in [:p] status)
         (assoc-in [:a] new-a)
         (assoc-in [:pc] (+ (get regs :pc) 2)))))
+
+(def-instr jmp-abs 0x4C [rom regs]
+  (let [ pc (get regs :pc)
+         size (get instr-size 0x4C)
+         address (addr rom pc size)]
+    (assoc-in regs [:pc] (- address 0xC000))))
+
+(def-instr eor-abs 0x4D [rom regs]
+  (let [ data (bit-and (get @ram (addr rom (get regs :pc) 2)) 0x0FF)
+         a (get regs :a)
+         new-a (bit-and (bit-xor data a) 0x0FF)
+         p (get regs :p)
+         zero (if (= 0 new-a) 0x2 0x0)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7D))]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) 3)))))
+
 
 (def-instr bvc-rel 0x50 [rom regs]
   (if (= (bit-and (get regs :p) 0x40) 0x00)
