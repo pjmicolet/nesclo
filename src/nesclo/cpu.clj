@@ -494,14 +494,17 @@
         (assoc-in [:a] x)
         (assoc-in [:pc] (+ (get regs :pc) 1)))))
 
-(def-instr stx-abs 0x8E [rom regs]
-  (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :x)))
+(def-instr sty-abs 0x8C [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :y)))
   (assoc-in regs [:pc] (+ (get regs :pc) 3)))
 
 (def-instr stx-abs 0x8D [rom regs]
   (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :a)))
   (assoc-in regs [:pc] (+ (get regs :pc) 3)))
 
+(def-instr stx-abs 0x8E [rom regs]
+  (aset-byte @ram (addr rom (get regs :pc) 2) (unchecked-byte (get regs :x)))
+  (assoc-in regs [:pc] (+ (get regs :pc) 3)))
 ; Still need to figure out how to do signed byte
 (def-instr bcc 0x90 [rom regs]
   (if (= (bit-and (get regs :p) 0x01) 0x00)
