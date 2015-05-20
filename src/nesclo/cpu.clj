@@ -5,22 +5,22 @@
 (def mem (atom (byte-array 65536)))
 
 ;;Define how large an instruction is beyond the instruction itself
-(def instr-size  [0 1 0 0 0 1 1 0 0 1 0 0 0 2 2 0
-                 1 1 0 0 0 1 1 0 0 2 0 0 0 2 2 0
-                 2 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                 1 1 0 0 0 1 1 0 0 2 0 0 0 2 2 0
-                 0 1 0 0 0 1 1 0 0 1 0 0 2 2 2 0
-                 1 1 0 0 0 1 1 0 0 2 0 0 0 2 2 0
-                 0 1 0 0 0 1 1 0 0 1 0 0 2 2 2 0
-                 1 1 0 0 0 1 1 0 0 2 0 0 0 2 2 0
-                 0 1 0 0 1 1 1 0 0 0 0 0 2 2 2 0
-                 1 1 0 0 1 1 1 0 0 2 0 0 0 2 0 0
-                 1 1 1 0 1 1 1 0 0 1 0 0 2 2 2 0
-                 1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
-                 1 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                 1 1 0 0 0 1 1 0 0 2 0 0 0 2 2 0
-                 1 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                 1 1 0 0 0 1 1 0 0 2 0 0 0 2 2 0])
+(def instr-size  [0 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
+                  2 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
+                  0 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
+                  0 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
+                  1 1 0 1 1 1 1 1 0 0 0 0 2 2 2 2
+                  1 1 0 0 1 1 1 1 0 2 0 0 0 2 0 0
+                  1 1 1 1 1 1 1 1 0 1 0 0 2 2 2 2
+                  1 1 0 1 1 1 1 1 0 2 0 0 2 2 2 2
+                  1 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
+                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0])
 
 ;;Define name of each instruction
 (def instr ["brk" "ora" "kil" "slo" "nop" "ora" "asl" "slo" "php" "ora" "asl" "anc" "nop" "ora" "asl" "slo"
@@ -59,25 +59,26 @@
 ;; 15 absy-addr
 ;; 16 zpx-addr
 ;; 17 zpy-addr 
+;; 18 indirect index, X address
 
 (def type-addr-diss [0 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           7 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           0 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           0 5 0 5 2 2 2 2 0 1 0 1 10 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           1 5 1 5 12 12 12 2 0 1 0 1 13 13 13 13 
-           11 6 0 6 16 16 17 3 0 15 0 9 8 14 8 8 
-           1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 4 0 9 0 9 8 8 8 8 
-           1 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-           1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
-           11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8])
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
+                     7 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
+                     0 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
+                     0 5 0 5 2 2 2 2 0 1 0 1 10 7 7 7 
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
+                     1 5 1 18 12 12 12 2 0 1 0 1 13 13 13 13 
+                    11 6 0 6 16 16 17 3 0 15 0 9 8 14 8 8 
+                     1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                    11 6 0 6 3 3 4 4 0 9 0 9 8 8 9 9 
+                     1 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
+                     1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
+                     1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                    11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8])
 
  
 (def type-addr ["imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
@@ -193,7 +194,15 @@
         (let [ pc (get regs :pc)
                y (get regs :y)
                zp-addr (addr mem pc 1)]
-           (bit-and (+ y zp-addr) 0xFF)))))
+           (bit-and (+ y zp-addr) 0xFF)))
+    18 (do 
+        (let [ pc (get regs :pc)
+               x (get regs :x)
+               operand (addr mem pc 1)
+               addr-address (bit-and (+ operand x) 0x0FF)
+               address-part1 (get-byte @mem (bit-and addr-address 0x0FF))
+               address-part2 (get-byte @mem (bit-and (+ addr-address 1) 0x0FF))]
+               (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))))))
 
 
 (def-instr ora '(0x01 0x05 0x09 0x0D 0x11 0x19 0x15 0x1D) [mem regs]
@@ -212,11 +221,12 @@
         (assoc-in [:a] new-a)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr asl-zp '(0x06 0x16) [mem regs]
+(def-instr asl-zp '(0x06 0x16 0x1E) [mem regs]
   (let [ pc (get regs :pc)
          mode (get type-addr-diss (get-byte @mem pc))
          address (condp = mode
                      2 (addr mem (get regs :pc) 1)
+                     7 (addr mem (get regs :pc) 2)
                      3 (grab-data 16 regs mem)
                      8 (grab-data 14 regs mem))
          zp (grab-data mode regs mem)
@@ -234,7 +244,7 @@
 
 (def-instr php '(0x08) [mem regs]
   (let [ p (get regs :p) ]
-    (aset-byte @mem (bit-or 0x100 (get regs :s))  (unchecked-byte p))
+    (aset-byte @mem (bit-or 0x100 (get regs :s))  (bit-or (unchecked-byte p) 0x10))
     (-> regs
         (assoc-in [:s] (- (get regs :s) 1))
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
@@ -320,11 +330,12 @@
         (assoc-in [:p] stat)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr rol-zp '(0x26 0x36) [mem regs]
+(def-instr rol-zp '(0x26 0x36 0x3E) [mem regs]
   (let [ pc (get regs :pc)
          mode (get type-addr-diss (get-byte @mem pc))
          address (condp = mode
                      2 (addr mem (get regs :pc) 1)
+                     7 (addr mem (get regs :pc) 2)
                      3 (grab-data 16 regs mem)
                      8 (grab-data 14 regs mem))
          zp (grab-data mode regs mem)
@@ -419,11 +430,12 @@
         (assoc-in [:a] new-a)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr lsr-zp '(0x46 0x56) [mem regs]
+(def-instr lsr-zp '(0x46 0x56 0x5E) [mem regs]
   (let [ pc (get regs :pc)
          mode (get type-addr-diss (get-byte @mem pc))
          address (condp = mode
                      2 (addr mem (get regs :pc) 1)
+                     7 (addr mem (get regs :pc) 2)
                      3 (grab-data 16 regs mem)
                      8 (grab-data 14 regs mem))
          zp (grab-data mode regs mem)
@@ -518,11 +530,12 @@
         (assoc-in [:a] adc)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr ror-zp '(0x66 0x76) [mem regs]
+(def-instr ror-zp '(0x66 0x76 0x7E) [mem regs]
   (let [ pc (get regs :pc)
          mode (get type-addr-diss (get-byte @mem pc))
          address (condp = mode
                      2 (addr mem (get regs :pc) 1)
+                     7 (addr mem (get regs :pc) 2)
                      3 (grab-data 16 regs mem)
                      8 (grab-data 14 regs mem))
          zp (grab-data mode regs mem)
@@ -605,6 +618,13 @@
          mode (get type-addr-diss (get-byte @mem pc))
          address (grab-data mode regs mem)]
   (aset-byte @mem address (unchecked-byte (get regs :a)))
+  (assoc-in regs [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1)))))
+
+(def-instr sax '(0x83 0x87 0x8F) [mem regs]
+  (let [ pc (get regs :pc)
+         mode (get type-addr-diss (get-byte @mem pc))
+         address (grab-data mode regs mem)]
+  (aset-byte @mem address (bit-and (unchecked-byte (get regs :a)) (unchecked-byte (get regs :x))))
   (assoc-in regs [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1)))))
 
 (def-instr sty '(0x84 0x8C 0x94) [mem regs]
@@ -694,7 +714,7 @@
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr ldx '(0xA2 0xA6 0xAE 0xB6) [mem regs]
+(def-instr ldx '(0xA2 0xA6 0xAE 0xB6 0xBE) [mem regs]
   (let [ pc (get regs :pc)
          p (get regs :p)
          mode (get type-addr-diss (get-byte @mem pc))
@@ -703,6 +723,19 @@
          meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
     (-> regs
         (assoc-in [:x] data)
+        (assoc-in [:p] meta-stat)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
+(def-instr lax '(0xA3 0xA7 0xAF 0xB3 0xB7 0xBF) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         status (bit-or (if(= data 0x0) 0x02 0x0) (if(= (bit-and data 0x80) 0x80) 0x80 0x0))
+         meta-stat (bit-and (bit-or p status) (bit-or status 0x7D))]
+    (-> regs
+        (assoc-in [:x] data)
+        (assoc-in [:a] data)
         (assoc-in [:p] meta-stat)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
@@ -782,12 +815,13 @@
         (assoc-in [:p] status)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr dec-zp '(0xC6 0xD6) [mem regs]
+(def-instr dec-zp '(0xC6 0xD6 0xDE) [mem regs]
   (let [pc (get regs :pc)
         mode (get type-addr-diss (get-byte @mem pc))
         data (grab-data mode regs mem)
         address (condp = mode
                     2 (addr mem (get regs :pc) 1)
+                    7 (addr mem (get regs :pc) 2)
                     3 (grab-data 16 regs mem)
                     8 (grab-data 14 regs mem))
         p (get regs :p)
@@ -842,10 +876,11 @@
         (assoc-in [:p] meta-status)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr bed '(0xD0) [mem regs]
+(def-instr bne '(0xD0) [mem regs]
+  (let [ address (addr mem (get regs :pc) 1)]
   (if (= (bit-and (get regs :p) 0x02) 0x00)
-    (assoc-in regs [:pc] (+ (+ (get regs :pc) (addr mem (get regs :pc) 1)) 2))
-    (assoc-in regs [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1)))))
+    (assoc-in regs [:pc] (bit-and (+ (+ (get regs :pc) (unchecked-byte address)) 2) 0xFFFF) )
+    (assoc-in regs [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
 (def-instr cld '(0xD8) [mem regs]
   (let [ status (bit-and (get regs :p) 0xF7)]
@@ -890,13 +925,14 @@
         (assoc-in [:a] sbc)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr inc-zp '(0xE6 0xF6) [mem regs]
+(def-instr inc-zp '(0xE6 0xF6 0xFE) [mem regs]
   (let [p (get regs :p)
         pc (get regs :pc)
         mode (get type-addr-diss (get-byte @mem pc))
         data (grab-data mode regs mem)
         address (condp = mode
                     2 (addr mem (get regs :pc) 1)
+                    7 (addr mem (get regs :pc) 2)
                     3 (grab-data 16 regs mem)
                     8 (grab-data 14 regs mem))
         inczp (bit-and (inc data) 0x0FF)
@@ -922,7 +958,9 @@
         (assoc-in [:x] incx)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr nop '(0xEA) [mem regs]
+(def-instr nop '(0xEA 0x04 0x44 0x64 0x0C 0x14 0x34 0x54 0x74 0xD4 0xF4
+                      0x1A 0x3A 0x5A 0x7A 0xDA 0xFA 0x80 0x1C 0x3C 0x5C
+                      0x7C 0xDC 0xFC) [mem regs]
   (assoc-in regs [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))
 
 (def-instr inc-abs '(0xEE) [mem regs]
@@ -966,6 +1004,7 @@
          16 (printf "0x%05x => %s $%02x,X " pc inst (addr mem pc size))
          17 (printf "0x%05x => %s $%02x,Y " pc inst (addr mem pc size))
          5 (printf "0x%05x => %s ($%02x,X) " pc inst (addr mem pc size))
+         18 (printf "0x%05x => %s ($%02x,X) " pc inst (addr mem pc size))
          6 (printf "0x%05x => %s ($%02x,Y) " pc inst (addr mem pc size))
          7 (printf "0x%05x => %s $%04x " pc inst (addr mem pc size))
          13 (printf "0x%05x => %s $%04x " pc inst (addr mem pc size))
