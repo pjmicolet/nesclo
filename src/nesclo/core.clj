@@ -13,11 +13,11 @@
 (require 'nesclo.rom)
 (refer 'nesclo.rom)
 
-(def filepath "C:/Users/pjm/Downloads/mario/supermario.nes")
+(def filepath "C:/Users/pjm/Downloads/nestest.nes")
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (let[buffer (getrom filepath)] (start-rom buffer 0x0000)))
+  (let[buffer (getrom filepath)] (start-rom buffer 0xC000)))
 
 
