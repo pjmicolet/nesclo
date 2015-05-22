@@ -184,8 +184,14 @@
                addr-address (bit-and (+ operand x) 0x0FF)
                address-part1 (get-byte @mem (bit-and addr-address 0x0FF))
                address-part2 (get-byte @mem (bit-and (+ addr-address 1) 0x0FF))]
-               (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))))))
-
+               (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF))))
+    19 (do
+        (let [ pc (get regs :pc)
+               y (get regs :y)
+               operand (addr mem pc 1)
+               address-part1 (get-byte @mem (bit-and operand 0x0FF))
+               address-part2 (get-byte @mem (bit-and (+ operand 1) 0x0FF))]
+               (bit-and (+ (+ (bit-shift-left address-part2 8) (bit-and address-part1 0x00FF)) y) 0xFFFF)))))
 
 (def-instr ora '(0x01 0x05 0x09 0x0D 0x11 0x19 0x15 0x1D) [mem regs]
   (let [ pc (get regs :pc)
@@ -198,6 +204,32 @@
          overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
          overzero (bit-or overflow zero)
          status (bit-and (bit-or p overzero) (bit-or overzero 0x7D)) ]
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
+(def-instr slo '(0x03 0x07 0x0F 0x13 0x17 0x1B 0x1F) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         address (condp = mode
+                     2 (addr mem (get regs :pc) 1)
+                     5 (grab-data 18 regs mem)
+                     6 (grab-data 19 regs mem)
+                     7 (addr mem (get regs :pc) 2)
+                     3 (grab-data 16 regs mem)
+                     8 (grab-data 14 regs mem)
+                     9 (grab-data 15 regs mem))
+         shifted-zp (bit-and (bit-shift-left data 1) 0x0FF)
+         new-a (bit-or (get regs :a) shifted-zp)
+         zero (if (= 0 new-a) 0x2 0x0)
+         carry (if (= (bit-and data 0x80) 0x80) 0x01 0x00)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero carry)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7C)) ]
+    (aset-byte @mem address (unchecked-byte shifted-zp))
     (-> regs
         (assoc-in [:p] status)
         (assoc-in [:a] new-a)
@@ -293,6 +325,32 @@
          zero (if (= anded-a 0) 0x02 0x00)
          apply-stat (bit-or zero overflow)
          stat (bit-and (bit-or  p apply-stat) (bit-or apply-stat 0x7D))]
+    (-> regs
+        (assoc-in [:a] anded-a)
+        (assoc-in [:p] stat)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
+(def-instr rla '(0x23 0x27 0x2F 0x33 0x37 0x3B 0x3F) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         address (condp = mode
+                     2 (addr mem (get regs :pc) 1)
+                     5 (grab-data 18 regs mem)
+                     6 (grab-data 19 regs mem)
+                     7 (addr mem (get regs :pc) 2)
+                     3 (grab-data 16 regs mem)
+                     8 (grab-data 14 regs mem)
+                     9 (grab-data 15 regs mem))
+         shifted-zp (bit-or (bit-and (bit-shift-left data 1) 0x0FF) (bit-and 0x01 p))
+         carry (if (= (bit-and data 0x80) 0x80) 0x01 0x00)
+         anded-a (bit-and shifted-zp (get regs :a))
+         neg (bit-and anded-a 0x80)
+         zero (if (= anded-a 0) 0x02 0x00)
+         apply-stat (bit-or zero neg carry)
+         stat (bit-and (bit-or  p apply-stat) (bit-or apply-stat 0x7C))]
+    (aset-byte @mem address (unchecked-byte shifted-zp))
     (-> regs
         (assoc-in [:a] anded-a)
         (assoc-in [:p] stat)
@@ -412,6 +470,33 @@
         (assoc-in [:a] new-a)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
+(def-instr sre '(0x43 0x47 0x4F 0x53 0x57 0x5B 0x5F) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         address (condp = mode
+                     2 (addr mem (get regs :pc) 1)
+                     5 (grab-data 18 regs mem)
+                     6 (grab-data 19 regs mem)
+                     7 (addr mem (get regs :pc) 2)
+                     3 (grab-data 16 regs mem)
+                     8 (grab-data 14 regs mem)
+                     9 (grab-data 15 regs mem))
+         shifted-zp (bit-shift-right data 1)
+         a (get regs :a)
+         carry (if (= (bit-and data 0x01) 0x01) 0x01 0x00)
+         new-a (bit-xor shifted-zp a)
+         zero (if (= 0 new-a) 0x2 0x0)
+         overflow (if (= (bit-and new-a 0x80) 0x80) 0x80 0x0)
+         overzero (bit-or overflow zero carry)
+         status (bit-and (bit-or p overzero) (bit-or overzero 0x7C))]
+    (aset-byte @mem address (unchecked-byte shifted-zp))
+    (-> regs
+        (assoc-in [:p] status)
+        (assoc-in [:a] new-a)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
 (def-instr lsr-zp '(0x46 0x56 0x5E) [mem regs]
   (let [ pc (get regs :pc)
          mode (get type-addr-diss (get-byte @mem pc))
@@ -506,7 +591,39 @@
                       0x01 0x00)
          status (bit-or overflow negative carry-flag zero)
          meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
-    (printf "%x\n" data)
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] adc)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
+(def-instr rra '(0x63 0x67 0x6F 0x73 0x77 0x7B 0x7F) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         address (condp = mode
+                     2 (addr mem (get regs :pc) 1)
+                     5 (grab-data 18 regs mem)
+                     6 (grab-data 19 regs mem)
+                     7 (addr mem (get regs :pc) 2)
+                     3 (grab-data 16 regs mem)
+                     8 (grab-data 14 regs mem)
+                     9 (grab-data 15 regs mem))
+         shifted (bit-or (bit-shift-right data 1) (bit-shift-left (bit-and p 0x01) 7))
+         shifted-zp (if ( > (double (/ data 2)) (double shifted)) (+ shifted 1) shifted)
+         carry (if (= (bit-and (get regs :p) 0x1) 0x1) 1 0)
+         a (get regs :a)
+         p (get regs :p)
+         adc (bit-and (+ shifted-zp a carry) 0xFF)
+         zero (if (= 0 adc) 0x02 0x00)
+         overflow (if (= 0 (bit-and (bit-not (bit-xor a shifted-zp)) (bit-xor a adc) 0x80)) 0 0x40)
+         negative (if (= (bit-and adc 0x80) 0x80) 0x80 0)
+         carry-flag (if (= 
+                         (bit-and (+ (bit-and a 0xFFF) (bit-and shifted-zp 0xFFF) (bit-and carry 0xFFF)) 0x100) 0x100)
+                      0x01 0x00)
+         status (bit-or overflow negative carry-flag zero)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
+    (aset-byte @mem address (unchecked-byte shifted))
     (-> regs
         (assoc-in [:p] meta-status)
         (assoc-in [:a] adc)
@@ -602,7 +719,7 @@
   (aset-byte @mem address (unchecked-byte (get regs :a)))
   (assoc-in regs [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1)))))
 
-(def-instr sax '(0x83 0x87 0x8F) [mem regs]
+(def-instr sax '(0x83 0x87 0x8F 0x97) [mem regs]
   (let [ pc (get regs :pc)
          mode (get type-addr-diss (get-byte @mem pc))
          address (grab-data mode regs mem)]
@@ -797,6 +914,31 @@
         (assoc-in [:p] status)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
+(def-instr dcp '(0xC3 0xC7 0xCF 0xD3 0xD7 0xDB 0xDF) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         address (condp = mode
+                     2 (addr mem (get regs :pc) 1)
+                     5 (grab-data 18 regs mem)
+                     6 (grab-data 19 regs mem)
+                     7 (addr mem (get regs :pc) 2)
+                     3 (grab-data 16 regs mem)
+                     8 (grab-data 14 regs mem)
+                     9 (grab-data 15 regs mem))
+         
+         dcp (bit-and (dec data) 0x0FF)
+         is-neg (if (= (bit-and (- (get regs :a) dcp) 0x80)0x80) 0x80 0x00)
+         is-bigger (if (> (get regs :a) dcp) 0x01 0x00)
+         is-equal (if (= (get regs :a) dcp) 0x03 0x00)
+         status (bit-or is-bigger is-neg is-equal)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x7C))]
+    (aset-byte @mem address (unchecked-byte dcp))
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
 (def-instr dec-zp '(0xC6 0xD6 0xDE) [mem regs]
   (let [pc (get regs :pc)
         mode (get type-addr-diss (get-byte @mem pc))
@@ -884,7 +1026,7 @@
         (assoc-in [:p] status)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
 
-(def-instr sbc-instr '(0xE1 0xE5 0xE9 0xED 0xF1 0xF5 0xF9 0xFD) [mem regs]
+(def-instr sbc-instr '(0xE1 0xE5 0xE9 0xED 0xF1 0xF5 0xF9 0xFD 0xEB) [mem regs]
   (let [ pc (get regs :pc)
          p (get regs :p)
          mode (get type-addr-diss (get-byte @mem pc))
@@ -901,11 +1043,43 @@
                       0x00 0x01)
          status (bit-or overflow negative carry-flag zero)
          meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
-    (printf "%x\n" data)
     (-> regs
         (assoc-in [:p] meta-status)
         (assoc-in [:a] sbc)
         (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
+(def-instr isc '(0xE3 0xE7 0xEF 0xF3 0xF7 0xFB 0xFF) [mem regs]
+  (let [ pc (get regs :pc)
+         p (get regs :p)
+         mode (get type-addr-diss (get-byte @mem pc))
+         data (grab-data mode regs mem)
+         address (condp = mode
+                     2 (addr mem (get regs :pc) 1)
+                     5 (grab-data 18 regs mem)
+                     6 (grab-data 19 regs mem)
+                     7 (addr mem (get regs :pc) 2)
+                     3 (grab-data 16 regs mem)
+                     8 (grab-data 14 regs mem)
+                     9 (grab-data 15 regs mem))
+         incr (bit-and (inc data) 0x0FF)
+         a (get regs :a)
+         carry (if (= (bit-and (get regs :p) 0x01) 0x01) 0x01 0x00)
+         not-carry (bit-and (bit-not carry) 0x01)
+         sbc (bit-and (- a incr not-carry) 0xFF)
+         zero (if (= 0 sbc) 0x02 0x00)
+         overflow (if (= 0 (bit-and (bit-xor a incr) (bit-xor a sbc) 0x80)) 0x00 0x40)
+         negative (if (= (bit-and sbc 0x80) 0x80) 0x80 0)
+         carry-flag (if (= 
+                         (bit-and (- (bit-and a 0xFFF) (bit-and incr 0xFFF) (bit-and not-carry 0xFFF)) 0x100) 0x100)
+                      0x00 0x01)
+         status (bit-or overflow negative carry-flag zero)
+         meta-status (bit-and (bit-or p status) (bit-or status 0x3C))]
+    (aset-byte @mem address (unchecked-byte incr))
+    (-> regs
+        (assoc-in [:p] meta-status)
+        (assoc-in [:a] sbc)
+        (assoc-in [:pc] (+ (get regs :pc) (+ (get instr-size (get-byte @mem (get regs :pc))) 1))))))
+
 
 (def-instr inc-zp '(0xE6 0xF6 0xFE) [mem regs]
   (let [p (get regs :p)
@@ -988,6 +1162,7 @@
          5 (printf "0x%05x => %s ($%02x,X) " pc inst (addr mem pc size))
          18 (printf "0x%05x => %s ($%02x,X) " pc inst (addr mem pc size))
          6 (printf "0x%05x => %s ($%02x,Y) " pc inst (addr mem pc size))
+         19 (printf "0x%05x => %s ($%02x,Y) " pc inst (addr mem pc size))
          7 (printf "0x%05x => %s $%04x " pc inst (addr mem pc size))
          13 (printf "0x%05x => %s $%04x " pc inst (addr mem pc size))
          8 (printf "0x%05x => %s $%04x,X " pc inst (addr mem pc size))
@@ -1011,7 +1186,6 @@
 (defn execute-instr [mem regs]
   (let [ inst (get @instr-ops (get-byte @mem (get regs :pc)) "Last") ]
   (disassemble mem (get regs :pc) regs 0)
-  (get @mem 0xFFFF)
   (when (not= inst "Last")
     (recur mem (run inst mem regs)))))
 
