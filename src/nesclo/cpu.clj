@@ -5,22 +5,22 @@
 (def mem (atom (byte-array 65536)))
 
 ;;Define how large an instruction is beyond the instruction itself
-(def instr-size  [0 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
-                  2 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
-                  0 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
-                  0 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
+(def instr-size  [0 1 0 1 1 1 1 1 0 1 0 0 2 2 2 2 
+                  1 1 0 1 1 1 1 1 0 2 0 2 2 2 2 2
+                  2 1 0 1 1 1 1 1 0 1 0 0 2 2 2 2
+                  1 1 0 1 1 1 1 1 0 2 0 2 2 2 2 2
+                  0 1 0 1 1 1 1 1 0 1 0 0 2 2 2 2
+                  1 1 0 1 1 1 1 1 0 2 0 2 2 2 2 2
+                  0 1 0 1 1 1 1 1 0 1 0 0 2 2 2 2
+                  1 1 0 1 1 1 1 1 0 2 0 2 2 2 2 2
                   1 1 0 1 1 1 1 1 0 0 0 0 2 2 2 2
                   1 1 0 0 1 1 1 1 0 2 0 0 0 2 0 0
                   1 1 1 1 1 1 1 1 0 1 0 0 2 2 2 2
                   1 1 0 1 1 1 1 1 0 2 0 0 2 2 2 2
-                  1 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 1 0 0 2 2 2 0
-                  1 1 0 0 1 1 1 0 0 2 0 0 2 2 2 0])
+                  1 1 0 1 1 1 1 1 0 1 0 0 2 2 2 2 
+                  1 1 0 1 1 1 1 1 0 2 0 2 2 2 2 2 
+                  1 1 0 1 1 1 1 1 0 1 0 1 2 2 2 2 
+                  1 1 0 1 1 1 1 1 0 2 0 1 2 2 2 2])
 
 ;;Define name of each instruction
 (def instr ["brk" "ora" "kil" "slo" "nop" "ora" "asl" "slo" "php" "ora" "asl" "anc" "nop" "ora" "asl" "slo"
@@ -60,6 +60,7 @@
 ;; 16 zpx-addr
 ;; 17 zpy-addr 
 ;; 18 indirect index, X address
+;; 19 indirect index, Y address
 
 (def type-addr-diss [0 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
                     11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
@@ -69,37 +70,18 @@
                     11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
                      0 5 0 5 2 2 2 2 0 1 0 1 10 7 7 7 
                     11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-                     1 5 1 18 12 12 12 2 0 1 0 1 13 13 13 13 
-                    11 6 0 6 16 16 17 3 0 15 0 9 8 14 8 8 
+                     1 18 1 18 12 12 12 12 0 1 0 1 13 13 13 13 
+                    11 19 0 6 16 16 17 17 0 15 0 9 8 14 8 8 
                      1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
                     11 6 0 6 3 3 4 4 0 9 0 9 8 8 9 9 
                      1 5 0 5 2 2 2 2 0 1 0 1 7 7 7 7 
                     11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-                     1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                     1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
                     11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8 
-                     1 6 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
+                     1 5 1 5 2 2 2 2 0 1 0 1 7 7 7 7 
                     11 6 0 6 3 3 3 3 0 9 0 9 8 8 8 8])
 
  
-(def type-addr ["imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "abs" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imp" "iix" "imp" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "ind" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imm" "iix" "imm" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imm" "iix" "imm" "iix" "zp" "zp" "zpy" "zpy" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imm" "iix" "imp" "iix" "zp" "zp" "zpy" "zpy" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imm" "iiy" "imm" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx" 
-           "imm" "iiy" "imm" "iix" "zp" "zp" "zp" "zp" "imp" "imm" "imp" "imm" "abs" "abs" "abs" "abs" 
-           "rel" "iiy" "imp" "iiy" "zpx" "zpx" "zpx" "zpx" "imp" "absy" "imp" "absy" "absx" "absx" "absx" "absx"])
-
 (defn assoc-all [vect keys value]
   (reduce #(assoc %1 %2 value) vect keys))
 
